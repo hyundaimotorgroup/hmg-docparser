@@ -1,0 +1,36 @@
+# Optional local-only Confluence upload pipeline. This is not part of quickstart.
+# All connection values come from the local environment; never commit them to YAML.
+input_dir: ${CONFLUENCE_INPUT_PATH}
+output_dir: ${CONFLUENCE_OUTPUT_DIR}
+
+document_limits:
+  allowed_extensions: [.md, .markdown]
+
+pipeline:
+  output_node: confluence_upload
+  nodes:
+    - id: markdown_loader
+      node: markdown_document_loader
+      execution_scope: document
+      input:
+        type: document_dto@v1
+      output:
+        type: document_dto@v1
+      node_config:
+        encoding: utf-8
+
+    - id: confluence_upload
+      node: confluence_uploader
+      execution_scope: document
+      input:
+        type: document_dto@v1
+      output:
+        type: document_dto@v1
+      depends_on: [markdown_loader]
+      node_config:
+        token: ${CONFLUENCE_TOKEN}
+        # Cloud API tokens use Basic auth; leave email empty for Bearer credentials.
+        email: ${CONFLUENCE_EMAIL}
+        space_id: ${CONFLUENCE_SPACE_ID}
+        parent_id: ${CONFLUENCE_PARENT_ID}
+        base_url: ${CONFLUENCE_BASE_URL}

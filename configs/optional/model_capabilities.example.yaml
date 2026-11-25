@@ -1,0 +1,12 @@
+# Advanced operator extension: explicitly load with
+# CapabilityRegistry.from_path(path, include_defaults=True), then pass the registry
+# as runtime _capability_registry. This file is never auto-loaded.
+# Replace this exact deployment identity and verify support before enabling it.
+version: 1
+models:
+  - provider: openai
+    api_type: openai
+    model: operator-model
+    deployment: operator-deployment
+    modes: [provider_default]
+    sampling: true

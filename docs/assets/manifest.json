@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "recorded_date": "2026-11-16",
+  "scope": "Bundled checkpoints, input/tutorial samples, and evaluation assets; model downloads and installed dependencies are documented separately.",
+  "assets": [
+    {
+      "path": "inputs/test_KIA_EV9_price.pdf",
+      "bytes": 2901979,
+      "sha256": "c000bc5f68e2e34106ade928894e60e5ad73545cbc9ed5caae8226b4293edeeb",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "models/router/binary_router.pth",
+      "bytes": 16340714,
+      "sha256": "2583235e549a56adbf618a2d375c63f8af4f200c38fe26360f8e81b9f9c96adc",
+      "origin": "https://github.com/hyundaimotorgroup/hmg-doc-parser/tree/main/models/router",
+      "copyright_holder": "Hyundai Motor Group",
+      "license": "Apache-2.0",
+      "redistribution_permission": "granted_under_license",
+      "notes": "Commercial and non-commercial use, modification, fine-tuning, and redistribution are permitted under Apache-2.0. Retain applicable notices and mark modifications.",
+      "copyright_notice": "Copyright (c) 2026 Hyundai Motor Group.",
+      "license_file": "models/router/LICENSE",
+      "notice_file": "models/router/NOTICE"
+    },
+    {
+      "path": "models/router/second_stage_fig.pth",
+      "bytes": 16346926,
+      "sha256": "5594033f223083533d317cec37d62075f524dec2766df2776554553f7564c9c3",
+      "origin": "https://github.com/hyundaimotorgroup/hmg-doc-parser/tree/main/models/router",
+      "copyright_holder": "Hyundai Motor Group",
+      "license": "Apache-2.0",
+      "redistribution_permission": "granted_under_license",
+      "notes": "Commercial and non-commercial use, modification, fine-tuning, and redistribution are permitted under Apache-2.0. Retain applicable notices and mark modifications.",
+      "copyright_notice": "Copyright (c) 2026 Hyundai Motor Group.",
+      "license_file": "models/router/LICENSE",
+      "notice_file": "models/router/NOTICE"
+    },
+    {
+      "path": "models/router/second_stage_tab.pth",
+      "bytes": 16341806,
+      "sha256": "475888f9186e6ca3c0b80846593f3cb0cbd14e7ed3547c53ce1d4ac7374f1dfd",
+      "origin": "https://github.com/hyundaimotorgroup/hmg-doc-parser/tree/main/models/router",
+      "copyright_holder": "Hyundai Motor Group",
+      "license": "Apache-2.0",
+      "redistribution_permission": "granted_under_license",
+      "notes": "Commercial and non-commercial use, modification, fine-tuning, and redistribution are permitted under Apache-2.0. Retain applicable notices and mark modifications.",
+      "copyright_notice": "Copyright (c) 2026 Hyundai Motor Group.",
+      "license_file": "models/router/LICENSE",
+      "notice_file": "models/router/NOTICE"
+    },
+    {
+      "path": "tools/eval/dp_evalset_design.pdf",
+      "bytes": 1453383,
+      "sha256": "6613fdcc46ba306ab3493678903c3d47809280ab9c40f0d6b011b3be8d245070",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tools/eval/dp_evalset_design_gt.md",
+      "bytes": 14711,
+      "sha256": "5b3ae22e36033c9e007108ebe57b3b795afc87871136e45ac94e47a1eed57565",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tools/eval/dp_evalset_external.pdf",
+      "bytes": 5652784,
+      "sha256": "30cfe08f8b09be8d6c666a1aa70284e9a4c13f48f94f8b5c12bf7a8a89a54c96",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tools/eval/dp_evalset_external_gt.md",
+      "bytes": 42414,
+      "sha256": "c7cd8a68e2e10f7476d0d33bedfb779f1eceed86bd3ecf582640e768c580a8b7",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tools/eval/dp_evalset_simple.pdf",
+      "bytes": 2806706,
+      "sha256": "c7816678d5a8255c8bc364b3ae343d3f0211baa978421d0cdafb58751e72e4ba",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tools/eval/dp_evalset_simple_gt.md",
+      "bytes": 41780,
+      "sha256": "af358e194f99e5ffa7be296c3454a25b5eba51f6727a003efd5edd039914b4ae",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tools/eval/eval_prompt.md",
+      "bytes": 13012,
+      "sha256": "76845185a3b46007978651dd58529ff92651958feb0c0a14b255bb44779befc8",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tools/eval/fact_dict_design.pkl",
+      "bytes": 20538,
+      "sha256": "ada61c39e9282eab0ba769e7c293984853edf26db31586808294e905dee82649",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tools/eval/fact_dict_external.pkl",
+      "bytes": 75721,
+      "sha256": "b40b1ea28daad91e5a802db18ca5e9a2a027ea80918ae9fa5ced6372cb989d07",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tools/eval/fact_dict_simple.pkl",
+      "bytes": 45785,
+      "sha256": "8f6ca8b9c778b23a9a33239b0d29ab00a767b54161e1d9285fee824568a8191b",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tutorial/dolphin_15_fastapi/layout_smoke_page.png",
+      "bytes": 582716,
+      "sha256": "d92dac98b7528c362ff187fe1487008c3b8291a09eefdf06cc3565de7fb7cd45",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    },
+    {
+      "path": "tutorial/paddle_ocr_fastapi/paddle_test.png",
+      "bytes": 134720,
+      "sha256": "f5e560fb98ed64d431b9b7dd8c167ce83883efe855027fae826bd146af38f2b5",
+      "origin": null,
+      "copyright_holder": null,
+      "license": null,
+      "redistribution_permission": "not_recorded",
+      "notes": "No asset-specific permission record accompanies this file. The parser code license does not establish its rights."
+    }
+  ]
+}

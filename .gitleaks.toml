@@ -1,0 +1,4 @@
+title = "PDF parser secret scan"
+
+[extend]
+useDefault = true

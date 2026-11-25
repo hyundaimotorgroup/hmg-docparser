@@ -1,0 +1,379 @@
+# Beta: block-context pipeline under performance validation.
+# Same upstream extraction as group_internal; role-specific restoration replaces global-context.
+# Requires operator-provided endpoints and verified model access, not public API credentials.
+# Text restoration: gpt-6-luna/openai; table/image: gemini-3.8-flash/gemini.
+# L1/native text skips additional restoration. Block failures retain original content.
+# Built-in capabilities are project-maintained internal resources; no inferred internal rules.
+# Optional pricing: pricing_file: ./optional/llm_pricing.yaml (omit for usage only).
+input_dir: inputs
+output_dir: outputs/tmp
+document_limits:
+  allowed_extensions:
+  - .pdf
+  max_input_mb: 100
+  max_pdf_pages: 500
+  max_zip_members: 1000
+  max_zip_uncompressed_mb: 500
+  max_zip_compression_ratio: 100
+langfuse:
+  'on': false
+resource_budget:
+  scheduler_max_workers: 8
+pipeline:
+  output_node: block_context_assemble
+  nodes:
+  - id: split_pages
+    node: pdf_page_split_loader
+    execution_scope: fanout
+    input:
+      type: document_dto@v1
+    output:
+      type: page_dto@v1
+      is_list: true
+    depends_on:
+    - __START__
+    node_config:
+      keep_page_artifacts: false
+  - id: stage1_router
+    node: stage1_page_router
+    execution_scope: page
+    input:
+      type: page_dto@v1
+      is_list: true
+    output:
+      type: page_dto@v1
+      is_list: true
+    depends_on:
+    - split_pages
+    node_config:
+      enabled: true
+      server_url: ${ROUTER_SERVER_URL:-http://127.0.0.1:8001}
+      ssl: false
+  - id: whole_page_llm
+    node: whole_page_llm_processor
+    execution_scope: page
+    input:
+      type: page_dto@v1
+      is_list: true
+    output:
+      type: page_enriched_dto@v1
+      is_list: true
+    depends_on:
+    - stage1_router
+    max_concurrency: 8
+    node_config:
+      trigger_levels:
+      - 1
+      provider: llm_internal_api
+      model_name: ${LLM_INTERNAL_API_LIGHT_VLM_MODEL:-gpt-6-luna}
+      base_url: ${LLM_INTERNAL_API_BASE_URL}
+      api_key: ${LLM_INTERNAL_API_KEY}
+      project_id: ${LLM_INTERNAL_API_PROJECT_ID:-}
+      prompt: Please convert this document page to Markdown. Extract the text exactly
+        as it appears. Do not use backticks.
+      progress_weight: 2
+      api_type: openai
+  - id: layout
+    node: dolphin_layout_parser
+    execution_scope: page
+    input:
+      type: page_dto@v1
+      is_list: true
+    output:
+      type: page_layout_dto@v1
+      is_list: true
+    depends_on:
+    - stage1_router
+    max_concurrency: 8
+    node_config:
+      version: v2
+      v2_server_url: ${DOLPHIN_SERVER_URL}
+      v2_model_name: ${DOLPHIN_MODEL:-dolphinv2}
+      v2_ssl: false
+      target_size: 1600
+      skip_levels:
+      - 1
+      keep_page_artifacts: false
+  - id: stage2_router
+    node: stage2_element_router
+    execution_scope: page
+    input:
+      type: page_layout_dto@v1
+      is_list: true
+    output:
+      type: page_layout_dto@v1
+      is_list: true
+    depends_on:
+    - layout
+    node_config:
+      enabled: true
+      server_url: ${ROUTER_SERVER_URL:-http://127.0.0.1:8001}
+      ssl: false
+  - id: text_filter
+    node: layout.label_filter
+    execution_scope: page
+    input:
+      type: page_layout_dto@v1
+      is_list: true
+    output:
+      type: page_layout_dto@v1
+      is_list: true
+    depends_on:
+    - stage2_router
+    node_config:
+      input_exclude_labels:
+      - fig
+      - figure
+      - image
+      - img
+      - picture
+      - chart
+      - tab
+      - table
+  - id: table_filter
+    node: layout.label_filter
+    execution_scope: page
+    input:
+      type: page_layout_dto@v1
+      is_list: true
+    output:
+      type: page_layout_dto@v1
+      is_list: true
+    depends_on:
+    - stage2_router
+    node_config:
+      input_labels:
+      - table
+      - tab
+  - id: image_filter
+    node: layout.label_filter
+    execution_scope: page
+    input:
+      type: page_layout_dto@v1
+      is_list: true
+    output:
+      type: page_layout_dto@v1
+      is_list: true
+    depends_on:
+    - stage2_router
+    node_config:
+      input_labels:
+      - img
+      - fig
+      - figure
+      - image
+      - picture
+      - chart
+  - id: text_ocr
+    node: paddle_triton_ocr
+    execution_scope: page
+    input:
+      type: page_layout_dto@v1
+      is_list: true
+    output:
+      type: page_enriched_dto@v1
+      is_list: true
+    depends_on:
+    - text_filter
+    max_concurrency: 8
+    node_config:
+      server_url: ${PADDLE_SERVER_URL}
+      model_name: ${PADDLE_MODEL:-paddle}
+      ssl: ${PADDLE_SSL:-true}
+      token: ${PADDLE_TOKEN:-}
+      padding: 75
+      concurrency: 8
+  - id: text_context_restore
+    node: layout.block_context_restorer
+    execution_scope: page
+    input:
+      type: page_enriched_dto@v1
+      is_list: true
+    output:
+      type: page_enriched_dto@v1
+      is_list: true
+    depends_on:
+    - text_ocr
+    max_concurrency: 8
+    node_config:
+      block_kind: text
+      provider: llm_internal_api
+      api_type: openai
+      model_name: gpt-6-luna
+      base_url: ${LLM_INTERNAL_API_BASE_URL}
+      api_key: ${LLM_INTERNAL_API_KEY}
+      project_id: ${LLM_INTERNAL_API_PROJECT_ID:-}
+      max_workers: 8
+      progress_weight: 5
+      skip_levels:
+      - 1
+      max_processing_attempts_per_block: 2
+      few_shot_examples:
+      - 1
+      - 2
+  - id: table_parse
+    node: table_vlm_caption_maker
+    execution_scope: page
+    input:
+      type: page_layout_dto@v1
+      is_list: true
+    output:
+      type: page_enriched_dto@v1
+      is_list: true
+    depends_on:
+    - table_filter
+    max_concurrency: 8
+    node_config:
+      provider: llm_internal_api
+      model_name: ${LLM_INTERNAL_API_LIGHT_VLM_MODEL:-gpt-6-luna}
+      base_url: ${LLM_INTERNAL_API_BASE_URL}
+      api_key: ${LLM_INTERNAL_API_KEY}
+      project_id: ${LLM_INTERNAL_API_PROJECT_ID:-}
+      max_workers: 8
+      table_output_format: markdown
+      progress_weight: 5
+      api_type: openai
+      level2_model_name: ${LLM_INTERNAL_API_LIGHT_VLM_MODEL:-gpt-6-luna}
+      level3_model_name: ${LLM_INTERNAL_API_MEDIUM_VLM_MODEL:-gemini-3.8-flash}
+      level2_api_type: openai
+      level3_api_type: gemini
+  - id: table_context_restore
+    node: layout.block_context_restorer
+    execution_scope: page
+    input:
+      type: page_enriched_dto@v1
+      is_list: true
+    output:
+      type: page_enriched_dto@v1
+      is_list: true
+    depends_on:
+    - table_parse
+    max_concurrency: 8
+    node_config:
+      block_kind: table
+      provider: llm_internal_api
+      api_type: gemini
+      model_name: gemini-3.8-flash
+      base_url: ${LLM_INTERNAL_API_BASE_URL}
+      api_key: ${LLM_INTERNAL_API_KEY}
+      project_id: ${LLM_INTERNAL_API_PROJECT_ID:-}
+      max_workers: 8
+      progress_weight: 5
+      skip_levels:
+      - 1
+      max_processing_attempts_per_block: 2
+      few_shot_examples:
+      - 1
+      - 2
+      table_input_max_tokens: 256
+  - id: image_parse
+    node: image_vlm_processor
+    execution_scope: page
+    input:
+      type: page_layout_dto@v1
+      is_list: true
+    output:
+      type: page_enriched_dto@v1
+      is_list: true
+    depends_on:
+    - image_filter
+    max_concurrency: 8
+    node_config:
+      provider: llm_internal_api
+      model_name: ${LLM_INTERNAL_API_LIGHT_VLM_MODEL:-gpt-6-luna}
+      base_url: ${LLM_INTERNAL_API_BASE_URL}
+      api_key: ${LLM_INTERNAL_API_KEY}
+      project_id: ${LLM_INTERNAL_API_PROJECT_ID:-}
+      use_vlm_parse: true
+      max_workers: 8
+      progress_weight: 5
+      api_type: openai
+      level2_model_name: ${LLM_INTERNAL_API_LIGHT_VLM_MODEL:-gpt-6-luna}
+      level3_model_name: ${LLM_INTERNAL_API_MEDIUM_VLM_MODEL:-gemini-3.8-flash}
+      level2_api_type: openai
+      level3_api_type: gemini
+  - id: image_context_restore
+    node: layout.block_context_restorer
+    execution_scope: page
+    input:
+      type: page_enriched_dto@v1
+      is_list: true
+    output:
+      type: page_enriched_dto@v1
+      is_list: true
+    depends_on:
+    - image_parse
+    max_concurrency: 8
+    node_config:
+      block_kind: image
+      provider: llm_internal_api
+      api_type: gemini
+      model_name: gemini-3.8-flash
+      base_url: ${LLM_INTERNAL_API_BASE_URL}
+      api_key: ${LLM_INTERNAL_API_KEY}
+      project_id: ${LLM_INTERNAL_API_PROJECT_ID:-}
+      max_workers: 8
+      progress_weight: 5
+      skip_levels:
+      - 1
+      max_processing_attempts_per_block: 2
+      few_shot_examples:
+      - 1
+      - 2
+  - id: merge
+    node: layout.merge_page_enrichments
+    execution_scope: page
+    input:
+      type: page_enriched_dto@v1
+      is_list: true
+    output:
+      type: page_enriched_dto@v1
+      is_list: true
+    depends_on:
+    - whole_page_llm
+    - text_context_restore
+    - table_context_restore
+    - image_context_restore
+    node_config:
+      merge_key: block_id
+      field_priority:
+        text:
+        - whole_page_llm
+        - text_context_restore
+        - table_context_restore
+        - image_context_restore
+        title:
+        - image_context_restore
+        - text_context_restore
+        - table_context_restore
+        table_html_raw:
+        - table_context_restore
+  - id: format_markdown
+    node: layout_markdown_formatter
+    execution_scope: page
+    input:
+      type: page_enriched_dto@v1
+      is_list: true
+    output:
+      type: page_markdown_dto@v1
+      is_list: true
+    depends_on:
+    - merge
+    max_concurrency: 8
+    node_config:
+      include_table_crop_images: true
+      restore_tables: true
+      include_page_marker: false
+  - id: block_context_assemble
+    node: markdown_document_assembler
+    execution_scope: fanin
+    input:
+      type: page_markdown_dto@v1
+      is_list: true
+    output:
+      type: document_dto@v1
+    depends_on:
+    - format_markdown
+    node_config:
+      task_name: BLOCK_CONTEXT
+      save_debug_artifacts: false

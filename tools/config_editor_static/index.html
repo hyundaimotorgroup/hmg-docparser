@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF Parser Config Editor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header><h1>Pipeline config editor</h1><p>로컬 YAML 편집·검증 전용 — 실행하거나 설정을 저장하지 않습니다.</p></header>
+  <main>
+    <section class="toolbar">
+      <label>기본 구성 <select id="config-select"></select></label><button id="load-config">불러오기</button>
+      <label class="file-button">YAML 가져오기 <input id="yaml-file" type="file" accept=".yaml,.yml,text/yaml"></label>
+      <span class="separator"></span>
+      <label>노드 추가 <select id="palette"></select></label><button id="add-node">캔버스에 추가</button><button id="auto-layout">자동 배치</button>
+      <span class="separator"></span><button id="delete-edge" disabled>선택 연결 삭제</button><button id="validate">컴파일 검증</button><button id="export">YAML 내보내기</button>
+    </section>
+    <label class="field">가격 파일 (선택) <input id="pricing-file" type="text" placeholder="./my-prices.yaml"><small>USD / 100만 토큰. 비워 두면 사용량만 기록합니다. 상대 경로는 내보낸 설정 YAML 위치 기준입니다.</small></label>
+    <p id="status" role="status">카탈로그를 불러오는 중…</p>
+    <section class="overview" id="overview"></section>
+    <section class="workspace">
+      <div class="graph-panel">
+        <div class="graph-heading"><div><h2>DAG canvas</h2><p>노드를 드래그해 배치하고, 오른쪽 <b>출력</b> 포트에서 왼쪽 <b>입력</b> 포트로 드래그해 연결합니다. 연결선을 클릭하면 삭제할 수 있습니다.</p></div><span>출력 → 입력</span></div>
+        <div class="canvas-viewport"><div id="graph" class="graph"></div></div>
+      </div>
+      <aside class="inspector"><h2>Inspector</h2><div id="node-form">캔버스의 노드를 선택하세요.</div></aside>
+    </section>
+  </main>
+  <template id="field-template"><label class="field"><span></span><div></div><small></small></label></template>
+  <script src="app.js"></script>
+</body>
+</html>

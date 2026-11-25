@@ -1,0 +1,9 @@
+HMG-Doc Parser — Router EfficientNet B0 checkpoints
+Copyright (c) 2026 Hyundai Motor Group.
+
+The following checkpoint files are licensed under the Apache License,
+Version 2.0. See the accompanying LICENSE for the full terms.
+
+- binary_router.pth
+- second_stage_fig.pth
+- second_stage_tab.pth

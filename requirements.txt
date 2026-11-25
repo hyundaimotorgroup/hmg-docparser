@@ -1,0 +1,40 @@
+# Parser dependencies. Install from the repository root with:
+# python -m pip install -r requirements.txt
+# Router and Langfuse packages are included for dependency/security scanning;
+# their features still require explicit runtime configuration.
+
+# Core parser
+anthropic==0.49.0
+pydantic==2.11.7
+jsonschema==4.25.1
+google-genai==1.75.0  # thinking levels; wire-verified native config bridge
+beautifulsoup4==4.13.4
+numpy==1.26.4
+openai==1.88.0
+opencv_python_headless==4.11.0.86
+pdfplumber==0.11.10
+Pillow==13.0.0
+pypdf==6.21.2
+pypdfium2==5.14.0
+PyYAML==6.0.2
+Requests==2.32.4
+python-dotenv==1.1.0
+tritonclient[http]==2.63.0
+py-toon-format==0.1.0
+
+# Local router server (used by router-enabled profiles)
+fastapi==0.115.13
+python-multipart==0.0.32
+torch==2.6.0
+torchvision==0.21.0
+uvicorn==0.35.0
+
+# Optional Langfuse usage export (disabled in the supplied profiles)
+langfuse==4.9.0
+
+# Transitive dependency pins from the Black Duck remediation baseline
+# (2026-10-26). Shared Pillow/pypdf/pypdfium2/python-multipart pins are above.
+pdfminer.six==20260107
+pyasn1==0.6.4
+lxml==6.1.3
+protobuf==7.37.0rc1

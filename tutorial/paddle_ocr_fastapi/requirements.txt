@@ -1,0 +1,23 @@
+# Install PaddlePaddle first using the CPU wheel index documented in README.md.
+# Standalone Paddle server; install in its own environment.
+# 3.1.0 adds the PP-OCRv5 Korean recognizer registry used by server.py.
+paddleocr==3.1.0
+# PaddleOCR 3.1.0 allows newer PaddleX releases, but PaddleX 3.7 changed
+# PaddlePredictorOption's constructor and is incompatible with this API.
+paddlex[ie,multimodal,ocr,trans]==3.1.0
+numpy==1.26.4
+Pillow==13.0.0
+# PaddlePaddle is installed separately; require its patched runtime here too.
+protobuf==7.37.0rc1
+truststore>=0.10,<1
+huggingface_hub>=0.24,<1
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+
+pdfminer.six==20260107
+pyasn1==0.6.4
+pypdf==6.21.2
+pypdfium2==5.14.0
+python-multipart==0.0.32
+lxml==6.1.3
+langchain==0.3.30

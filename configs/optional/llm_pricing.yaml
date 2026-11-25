@@ -1,0 +1,8 @@
+# Fictional operator rates in USD per one million tokens.
+# For pipeline YAML under configs/: pricing_file: ./optional/llm_pricing.yaml.
+# For a YAML in this directory: pricing_file: ./llm_pricing.yaml.
+# Replace provider, model and rates with your actual service contract.
+openai:
+  demo-model:
+    input: 1.00
+    output: 4.00

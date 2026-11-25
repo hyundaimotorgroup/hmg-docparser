@@ -1,0 +1,283 @@
+# General LLM/VLM nodes accept optional user_prompt; supported effort models default to low.
+# Exact capabilities: core/adapters/models/resources/model_capabilities.yaml. Prices are optional operator settings.
+# Omit pricing_file for usage only; pricing_file: ./my-prices.yaml opts in (USD/million tokens).
+# See docs/llm-inference.md for prompt overrides, partial costs and provider limitations.
+# Local Dolphin 1.5 + Paddle FastAPI; CPU concurrency 2.
+# Same router/full-vision graph as default: router-selected whole-page VLM, layout/OCR/table/image processing,
+# then global-context refinement on pages outside skip_levels: [1].
+# Stage 1 L1 retains upstream Markdown; [] restores all-page refinement.
+# Requires a separate router and configured provider endpoints.
+#
+# This document is intentionally native-only: no internal endpoints, credentials,
+# Confluence upload, or legacy `is_page_parallel` fields are accepted.
+input_dir: inputs
+output_dir: outputs/tmp
+
+document_limits:
+  allowed_extensions: [.pdf]
+  max_input_mb: 100
+  max_pdf_pages: 500
+  max_zip_members: 1000
+  max_zip_uncompressed_mb: 500
+  max_zip_compression_ratio: 100
+
+langfuse:
+  "on": false
+
+resource_budget:
+  scheduler_max_workers: 2
+
+pipeline:
+  output_node: global_context_assemble
+  nodes:
+    - id: split_pages
+      node: pdf_page_split_loader
+      execution_scope: fanout
+      input:
+        type: document_dto@v1
+      output:
+        type: page_dto@v1
+        is_list: true
+      depends_on: [__START__]
+      node_config:
+        keep_page_artifacts: false
+
+    - id: stage1_router
+      node: stage1_page_router
+      execution_scope: page
+      input:
+        type: page_dto@v1
+        is_list: true
+      output:
+        type: page_dto@v1
+        is_list: true
+      depends_on: [split_pages]
+      node_config:
+        enabled: true
+        server_url: ${ROUTER_SERVER_URL:-http://127.0.0.1:8001}
+        ssl: false
+
+    - id: whole_page_llm
+      node: whole_page_llm_processor
+      execution_scope: page
+      input:
+        type: page_dto@v1
+        is_list: true
+      output:
+        type: page_enriched_dto@v1
+        is_list: true
+      depends_on: [stage1_router]
+      max_concurrency: 2
+      node_config:
+        trigger_levels: [1]
+        provider: openai
+        model_name: ${LOCAL_LIGHT_VLM_MODEL:-gpt-6-luna}
+        api_type: openai
+        base_url: ${LOCAL_LLM_BASE_URL:-https://api.openai.com/v1}
+        api_key: ${LOCAL_LLM_API_KEY}
+        prompt: "Please convert this document page to Markdown. Extract the text exactly as it appears. Do not use backticks."
+        progress_weight: 2
+
+    - id: layout
+      node: dolphin_layout_parser
+      execution_scope: page
+      input:
+        type: page_dto@v1
+        is_list: true
+      output:
+        type: page_layout_dto@v1
+        is_list: true
+      depends_on: [stage1_router]
+      max_concurrency: 2
+      node_config:
+        version: v1
+        v1_transport: fastapi
+        v1_server_url: ${LOCAL_DOLPHIN_URL:-http://127.0.0.1:8200}
+        target_size: 2048
+        skip_levels: [1]
+        keep_page_artifacts: false
+
+    - id: stage2_router
+      node: stage2_element_router
+      execution_scope: page
+      input:
+        type: page_layout_dto@v1
+        is_list: true
+      output:
+        type: page_layout_dto@v1
+        is_list: true
+      depends_on: [layout]
+      node_config:
+        enabled: true
+        server_url: ${ROUTER_SERVER_URL:-http://127.0.0.1:8001}
+        ssl: false
+
+    - id: text_filter
+      node: layout.label_filter
+      execution_scope: page
+      input:
+        type: page_layout_dto@v1
+        is_list: true
+      output:
+        type: page_layout_dto@v1
+        is_list: true
+      depends_on: [stage2_router]
+      node_config:
+        input_exclude_labels: [fig, figure, image, img, tab, table]
+
+    - id: table_filter
+      node: layout.label_filter
+      execution_scope: page
+      input:
+        type: page_layout_dto@v1
+        is_list: true
+      output:
+        type: page_layout_dto@v1
+        is_list: true
+      depends_on: [stage2_router]
+      node_config:
+        input_labels: [table, tab]
+
+    - id: image_filter
+      node: layout.label_filter
+      execution_scope: page
+      input:
+        type: page_layout_dto@v1
+        is_list: true
+      output:
+        type: page_layout_dto@v1
+        is_list: true
+      depends_on: [stage2_router]
+      node_config:
+        input_labels: [img, fig, figure, image, picture, chart]
+
+    - id: text_ocr
+      node: paddle_triton_ocr
+      execution_scope: page
+      input:
+        type: page_layout_dto@v1
+        is_list: true
+      output:
+        type: page_enriched_dto@v1
+        is_list: true
+      depends_on: [text_filter]
+      max_concurrency: 2
+      node_config:
+        transport: fastapi
+        server_url: ${LOCAL_PADDLE_URL:-http://127.0.0.1:8100}
+        padding: 75
+        concurrency: 2
+
+    - id: table_parse
+      node: table_vlm_caption_maker
+      execution_scope: page
+      input:
+        type: page_layout_dto@v1
+        is_list: true
+      output:
+        type: page_enriched_dto@v1
+        is_list: true
+      depends_on: [table_filter]
+      max_concurrency: 2
+      node_config:
+        provider: openai
+        model_name: ${LOCAL_LIGHT_VLM_MODEL:-gpt-6-luna}
+        api_type: openai
+        level2_model_name: ${LOCAL_LIGHT_VLM_MODEL:-gpt-6-luna}
+        level3_model_name: ${LOCAL_MEDIUM_VLM_MODEL:-gpt-6-luna}
+        level2_api_type: openai
+        level3_api_type: openai
+        base_url: ${LOCAL_LLM_BASE_URL:-https://api.openai.com/v1}
+        api_key: ${LOCAL_LLM_API_KEY}
+        max_workers: 2
+        table_output_format: markdown
+        progress_weight: 5
+
+    - id: image_parse
+      node: image_vlm_processor
+      execution_scope: page
+      input:
+        type: page_layout_dto@v1
+        is_list: true
+      output:
+        type: page_enriched_dto@v1
+        is_list: true
+      depends_on: [image_filter]
+      max_concurrency: 2
+      node_config:
+        provider: openai
+        model_name: ${LOCAL_LIGHT_VLM_MODEL:-gpt-6-luna}
+        api_type: openai
+        level2_model_name: ${LOCAL_LIGHT_VLM_MODEL:-gpt-6-luna}
+        level3_model_name: ${LOCAL_MEDIUM_VLM_MODEL:-gpt-6-luna}
+        level2_api_type: openai
+        level3_api_type: openai
+        base_url: ${LOCAL_LLM_BASE_URL:-https://api.openai.com/v1}
+        api_key: ${LOCAL_LLM_API_KEY}
+        use_vlm_parse: true
+        max_workers: 2
+        progress_weight: 5
+
+    - id: merge
+      node: layout.merge_page_enrichments
+      execution_scope: page
+      input:
+        type: page_enriched_dto@v1
+        is_list: true
+      output:
+        type: page_enriched_dto@v1
+        is_list: true
+      depends_on: [whole_page_llm, text_ocr, table_parse, image_parse]
+      node_config:
+        merge_key: block_id
+        field_priority:
+          text: [whole_page_llm, text_ocr, table_parse, image_parse]
+          title: [image_parse, text_ocr, table_parse]
+          table_html_raw: [table_parse]
+
+    - id: format_markdown
+      node: layout_markdown_formatter
+      execution_scope: page
+      input:
+        type: page_enriched_dto@v1
+        is_list: true
+      output:
+        type: page_markdown_dto@v1
+        is_list: true
+      depends_on: [merge]
+      max_concurrency: 2
+      node_config:
+        include_table_crop_images: true
+
+    - id: global_context_page
+      node: global_context_extraction_vlm_merger
+      execution_scope: page
+      input:
+        type: page_markdown_dto@v1
+        is_list: true
+      output:
+        type: page_markdown_dto@v1
+        is_list: true
+      depends_on: [format_markdown]
+      max_concurrency: 2
+      node_config:
+        skip_levels: [1]
+        provider: openai
+        model_name: ${LOCAL_HEAVY_VLM_MODEL:-gpt-6.1-sol}
+        api_type: openai
+        base_url: ${LOCAL_LLM_BASE_URL:-https://api.openai.com/v1}
+        api_key: ${LOCAL_LLM_API_KEY}
+        progress_weight: 5
+
+    - id: global_context_assemble
+      node: markdown_document_assembler
+      execution_scope: fanin
+      input:
+        type: page_markdown_dto@v1
+        is_list: true
+      output:
+        type: document_dto@v1
+      depends_on: [global_context_page]
+      node_config:
+        task_name: GLOBAL_CONTEXT_EXT
+        save_debug_artifacts: false

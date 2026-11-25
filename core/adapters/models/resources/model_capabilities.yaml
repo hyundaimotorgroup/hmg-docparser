@@ -1,0 +1,116 @@
+# Project-maintained API compatibility rules; ordinary users need not edit this file.
+# Loaded once on first model lookup. Invalid/missing built-ins disable optional rules, not imports.
+# Use an explicitly loaded operator registry for private deployments; see docs/llm-inference.md.
+# Exact provider/protocol/model/deployment identities. No prices or connection credentials.
+# source/verified_on document evidence; they do not establish live API availability.
+version: 1
+models:
+- provider: openai
+  api_type: openai
+  model: o3
+  modes:
+  - effort
+  efforts:
+  - low
+  - medium
+  - high
+  default_low: true
+  sampling: false
+  output_token_parameter: max_completion_tokens
+  serializer: openai
+  usage_semantics: openai
+  source: https://developers.openai.com/api/docs/guides/reasoning
+  verified_on: '2025-06-01'
+- provider: openai
+  api_type: openai
+  model: gpt-4.1
+  usage_semantics: openai
+  source: https://developers.openai.com/api/docs/models/gpt-4.1
+- provider: gemini
+  api_type: gemini
+  model: gemini-2.5-flash
+  modes:
+  - budget
+  - disabled
+  budget_min: 1
+  budget_max: 24576
+  serializer: gemini
+  usage_semantics: gemini
+  source: https://ai.google.dev/gemini-api/docs/thinking
+- provider: gemini
+  api_type: gemini
+  model: gemini-2.5-pro
+  modes:
+  - budget
+  budget_min: 128
+  budget_max: 32768
+  serializer: gemini
+  usage_semantics: gemini
+  source: https://ai.google.dev/gemini-api/docs/thinking
+- provider: anthropic
+  api_type: anthropic
+  model: claude-sonnet-4-20250514
+  modes:
+  - budget
+  - disabled
+  budget_min: 1024
+  serializer: anthropic
+  usage_semantics: anthropic
+  source: https://platform.claude.com/docs/en/build-with-claude/extended-thinking
+- provider: openai
+  api_type: openai
+  model: gpt-6.1-sol
+  max_output_tokens: 128000
+  modes:
+  - effort
+  efforts:
+  - low
+  - medium
+  - high
+  - xhigh
+  - max
+  default_low: true
+  sampling: false
+  output_token_parameter: max_completion_tokens
+  serializer: openai
+  usage_semantics: openai
+  source: https://developers.openai.com/api/docs/models/gpt-6.1-sol
+  verified_on: '2026-11-16'
+- provider: openai
+  api_type: openai
+  model: gpt-6-luna
+  max_output_tokens: 128000
+  modes:
+  - effort
+  - disabled
+  efforts:
+  - none
+  - low
+  - medium
+  - high
+  - xhigh
+  - max
+  default_low: true
+  sampling: false
+  output_token_parameter: max_completion_tokens
+  serializer: openai
+  usage_semantics: openai
+  source: https://developers.openai.com/api/docs/models/gpt-6-luna
+  verified_on: '2026-11-16'
+- provider: anthropic
+  api_type: anthropic
+  model: claude-opus-5-5
+  modes:
+  - effort
+  - adaptive
+  efforts:
+  - low
+  - medium
+  - high
+  - xhigh
+  - max
+  default_low: true
+  serializer: anthropic
+  usage_semantics: anthropic
+  source: https://platform.claude.com/docs/en/build-with-claude/thinking
+  verified_on: '2026-11-16'
