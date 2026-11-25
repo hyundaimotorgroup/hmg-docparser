@@ -10,6 +10,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 tmp/
+/models/paddle/
 tutorial/paddle_ocr_fastapi/paddle_test.response.json
 tutorial/paddle_ocr_fastapi/paddle_test.server.log
 tutorial/paddle_ocr_fastapi/.cache/

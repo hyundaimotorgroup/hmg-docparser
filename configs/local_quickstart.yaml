@@ -10,7 +10,7 @@
 #
 # This document is intentionally native-only: no internal endpoints, credentials,
 # Confluence upload, or legacy `is_page_parallel` fields are accepted.
-input_dir: inputs
+input_dir: "inputs/for_quickstart.pdf"
 output_dir: outputs/tmp
 
 document_limits:

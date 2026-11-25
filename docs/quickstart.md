@@ -270,7 +270,71 @@ logs, environment records, the generated YAML, and output under
 LLM/VLM credentials. Use unused ports; the script overrides its local provider
 URLs, with ports controlled by `DOLPHIN_15_PORT` and `PADDLE_OCR_PORT`.
 Run `bash scripts/verify_local_quickstart_clean_conda.sh --help` for its options.
+The script detects installed fonts automatically. If none are usable, it downloads
+checksum-verified Noto Sans KR and its OFL license into `tmp/paddle_fonts/` for
+reuse. An environment or `.env` value for `PADDLE_PDX_LOCAL_FONT_FILE_PATH`
+overrides this selection.
 The script also accepts `sh` invocation and automatically enables Bash syntax.
+
+### If the Dolphin model download times out
+
+Hugging Face redirects model downloads to a CDN. Access to `huggingface.co`
+alone is insufficient: a timeout connecting to `us.aws.cdn.hf.co` can prevent
+`model.safetensors` from downloading. An HTTP 302 followed by a connection
+timeout indicates that the redirect succeeded but the download connection failed.
+
+On a computer that can download the model, run:
+
+```bash
+python -m pip install huggingface_hub
+hf download ByteDance/Dolphin-1.5 --local-dir ./Dolphin-1.5
+```
+
+Copy the contents of the complete `Dolphin-1.5` directory to
+`models/dolphin/` in the server's project directory. Include the model weights,
+configuration, tokenizer, and processor files; the weights alone are insufficient.
+Then run from the project root on the server:
+
+```bash
+DOLPHIN_15_MODEL="$PWD/models/dolphin" \
+  bash scripts/verify_local_quickstart_clean_conda.sh
+```
+
+An absolute path also works, for example
+`DOLPHIN_15_MODEL=/home/6901188/hmg-docparser-main/models/dolphin`.
+The script defaults to `configs/local_quickstart.yaml` and its `input_dir`;
+that input must be an existing PDF file. Set `DOLPHIN_15_MODEL` in the shell
+as shown above so the Dolphin server receives it. This loads Dolphin from local
+files; package installation, Paddle model downloads, and LLM/VLM calls still
+require their respective network access.
+
+### If the Paddle model download stalls
+
+The Korean recognizer download prints `Fetching 6 files`. Both the detection
+and recognition models, plus the Korean decoder dictionary, can be downloaded
+on another computer and transferred to the server. From the project root on
+the computer with download access, run:
+
+```bash
+python -m pip install 'huggingface_hub>=0.24,<1' truststore
+python tools/quickstart/download_paddle_models.py
+```
+
+Copy the entire generated `models/paddle/` directory to the same location in
+the server's project. It contains `PP-OCRv5_mobile_det/`,
+`korean_PP-OCRv5_mobile_rec/` (including `ppocrv5_korean_dict.txt`), and a
+download provenance record. Then run from the project root on the server:
+
+```bash
+DOLPHIN_15_MODEL="$PWD/models/dolphin" \
+PADDLE_OCR_MODEL_ROOT="$PWD/models/paddle" \
+  bash scripts/verify_local_quickstart_clean_conda.sh
+```
+
+With `PADDLE_OCR_MODEL_ROOT` set, the Paddle server uses these local model
+directories and dictionary. Incomplete local assets produce an error instead
+of falling back to a model download. Package installation and LLM/VLM calls
+still need network access.
 
 ## Model and sample conditions
 
@@ -280,11 +344,3 @@ See [model/data assets](model-and-data-assets.md) for bundled-file rights and
 For commercial layout use, PP-DocLayoutV3 is recommended; the supplied router
 profiles use Dolphin v2 under its separate research-license conditions and require
 a compatible adapter to use PP-DocLayoutV3.
-
-LLM/VLM usage is recorded by default; costs are optional. Shipped profiles do not calculate prices. See [usage and pricing](llm-inference.md) to select operator rates with `pricing_file` or reprice saved records.
-
-
-`configs/beta.yaml` is a block-context profile under performance validation. It requires group_internal model/router/layout/OCR connections. See [configuration](configuration.md#beta-profile-under-performance-validation) for role, cost and fallback contracts.
-
-
-Updated graph verification on 2026-11-25: local clean Conda installed fresh parser/router 3.12, Dolphin 3.12 and Paddle 3.11 environments and completed mixed_source_9p: 9 pages, 9 Stage 1 and 9 Stage 2 page records, 35 classified elements and 35 actual LLM/VLM requests. Default completed the same PDF with 16 classified elements and 17 model requests. Both preserved native text on pages 6–8 with zero model requests, no missing/duplicate/error pages, and owned-router cleanup. Different Dolphin versions/providers can produce different request counts and Markdown. Beta performance evaluation is separate.

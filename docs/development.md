@@ -77,8 +77,10 @@ The script rejects occupied ports and requires nonempty final Markdown without
 YAML, and outputs remain under `tmp/clean_conda_<config-name>/<run-id>/`.
 `DOLPHIN_15_PORT`/`PADDLE_OCR_PORT` default to 8200/8100; the generated YAML uses
 those loopback addresses. `QUICKSTART_READY_TIMEOUT` defaults to 1200 seconds per
-server. Set `PADDLE_PDX_LOCAL_FONT_FILE_PATH` when automatic local font detection
-is unsuitable. See `--help` for options.
+server. Fonts are detected automatically; if none are usable, verified Noto Sans
+KR and its OFL license are downloaded once into `tmp/paddle_fonts/` and reused.
+Set `PADDLE_PDX_LOCAL_FONT_FILE_PATH` in the environment or `.env` to override
+the font. See `--help` for options.
 
 Review regression options before a live comparison:
 
@@ -112,25 +114,3 @@ writes and Langfuse delivery need their own permitted targets and validation.
 4. Update [architecture](architecture.md), [configuration](configuration.md),
    [providers](providers.md), [outputs](outputs-and-failures.md), and
    [privacy](privacy-and-data-handling.md), including their Korean counterparts.
-
-## Validation boundaries
-
-Development runs before the Global Context skip policy covered macOS arm64/Python 3.12 local quickstart,
-default parsing, and a Confluence create/attachment client path.
-They are development evidence, not a guarantee for every release or platform.
-Managed/group full runs, real Langfuse delivery, Confluence existing-page updates/
-attachment replacement, and PP-DocLayoutV3 integration need separate verification.
-Use the [release checklist](release-checklist.md) for the current candidate and
-[asset register](model-and-data-assets.md) for fixture/checkpoint conditions.
-
-
-Project maintainers update `core/adapters/models/resources/model_capabilities.yaml` with exact identities, verification sources/dates and reasoning/usage regression checks. Ordinary users do not edit the built-in YAML. Clean Conda starts the CPU router in the parser environment and records `/health` instance/model readiness, checkpoint SHA-256, page-level Stage 1/2, usage/native preservation and owned-PID cleanup. `ROUTER_PORT` defaults to 8001.
-
-## Beta validation
-
-Beta remains under performance validation. Run `tests/test_block_context_*.py` for role/schema/preservation/retry/concurrency/cancellation/deadline/transport/formatter/DAG contracts. Separate identical-upstream restoration comparisons from full E2E measurements. Record fact preservation, context quality, fallback rate, actual usage, latency and memory. Source-project scores are not OSS validation results.
-
-
-Updated graph verification on 2026-11-25: local clean Conda installed fresh parser/router 3.12, Dolphin 3.12 and Paddle 3.11 environments and completed mixed_source_9p: 9 pages, 9 Stage 1 and 9 Stage 2 page records, 35 classified elements and 35 actual LLM/VLM requests. Default completed the same PDF with 16 classified elements and 17 model requests. Both preserved native text on pages 6–8 with zero model requests, no missing/duplicate/error pages, and owned-router cleanup. Different Dolphin versions/providers can produce different request counts and Markdown. Beta performance evaluation is separate.
-
-Beta measurements on 2026-11-25 used the first two public design pages. A full CLI run completed both pages with 44 model requests and 143,070 reported tokens; 14 of 23 restoration targets succeeded and 9 retained their originals. In a separate comparison using identical extracted DTOs and the same judge, baseline preserved 133/149 facts and beta 130/149, with no failed judgments. This sample showed no improvement and used more restoration requests/tokens. Broader datasets and the worker 1/2/8 latency/memory comparison remain unmeasured.

@@ -34,7 +34,13 @@ MAX_IMAGE_PIXELS = configured_limit("PADDLE_OCR_MAX_IMAGE_PIXELS", 128_000_000)
 TEXT_DETECTION_MODEL = "PP-OCRv5_mobile_det"
 TEXT_RECOGNITION_MODEL = "korean_PP-OCRv5_mobile_rec"
 KOREAN_RECOGNITION_REPOSITORY = "PaddlePaddle/korean_PP-OCRv5_mobile_rec"
-KOREAN_RECOGNITION_DIRECTORY = Path(__file__).with_name(".cache") / "korean_PP-OCRv5_mobile_rec_infer"
+MODEL_ROOT = os.getenv("PADDLE_OCR_MODEL_ROOT")
+LOCAL_MODEL_ROOT = Path(MODEL_ROOT).expanduser().resolve() if MODEL_ROOT else None
+TEXT_DETECTION_DIRECTORY = LOCAL_MODEL_ROOT / TEXT_DETECTION_MODEL if LOCAL_MODEL_ROOT else None
+KOREAN_RECOGNITION_DIRECTORY = (
+    LOCAL_MODEL_ROOT / TEXT_RECOGNITION_MODEL if LOCAL_MODEL_ROOT else
+    Path(__file__).with_name(".cache") / "korean_PP-OCRv5_mobile_rec_infer"
+)
 KOREAN_DICTIONARY_FILE = KOREAN_RECOGNITION_DIRECTORY / "ppocrv5_korean_dict.txt"
 KOREAN_DICTIONARY_URL = (
     "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/"
@@ -60,12 +66,17 @@ class OCRResponse(BaseModel):
 
 class OCRService:
     def __init__(self) -> None:
+        if TEXT_DETECTION_DIRECTORY is not None:
+            _validate_model_files(TEXT_DETECTION_DIRECTORY)
+            print(f"Using local Paddle detection model: {TEXT_DETECTION_DIRECTORY}", flush=True)
+        _download_korean_recognition_assets()
         from paddleocr import PaddleOCR
 
-        _download_korean_recognition_assets()
         self._predict_lock = threading.Lock()
+        print("Loading Paddle detection and Korean recognition models...", flush=True)
         self._pipeline = PaddleOCR(
             text_detection_model_name=TEXT_DETECTION_MODEL,
+            text_detection_model_dir=str(TEXT_DETECTION_DIRECTORY) if TEXT_DETECTION_DIRECTORY else None,
             text_recognition_model_name=TEXT_RECOGNITION_MODEL,
             text_recognition_model_dir=str(KOREAN_RECOGNITION_DIRECTORY),
             use_doc_orientation_classify=False,
@@ -87,29 +98,40 @@ class OCRService:
         return _extract_lines(results)
 
 
+def _validate_model_files(directory: Path) -> None:
+    missing = [
+        name for name in ("inference.json", "inference.pdiparams", "inference.yml")
+        if not (directory / name).is_file() or (directory / name).stat().st_size == 0
+    ]
+    if missing:
+        raise RuntimeError(f"Paddle model is incomplete: {directory}; missing or empty: " + ", ".join(missing))
+
+
 def _download_korean_recognition_assets() -> None:
     """Fetch the Korean PP-OCRv5 inference export and its decoder dictionary."""
 
     required_model_files = ("inference.json", "inference.pdiparams", "inference.yml")
-    if not all((KOREAN_RECOGNITION_DIRECTORY / name).is_file() for name in required_model_files):
+    if LOCAL_MODEL_ROOT is None and not all(
+        (KOREAN_RECOGNITION_DIRECTORY / name).is_file() for name in required_model_files
+    ):
         from huggingface_hub import snapshot_download
 
+        print(f"Downloading Korean Paddle recognition model: {KOREAN_RECOGNITION_REPOSITORY}", flush=True)
         KOREAN_RECOGNITION_DIRECTORY.mkdir(parents=True, exist_ok=True)
         snapshot_download(
             repo_id=KOREAN_RECOGNITION_REPOSITORY,
             local_dir=KOREAN_RECOGNITION_DIRECTORY,
         )
 
-    missing_model_files = [
-        name for name in required_model_files if not (KOREAN_RECOGNITION_DIRECTORY / name).is_file()
-    ]
-    if missing_model_files:
-        raise RuntimeError(
-            "Korean PP-OCRv5 download is incomplete; missing " + ", ".join(missing_model_files)
-        )
+    _validate_model_files(KOREAN_RECOGNITION_DIRECTORY)
 
     if not KOREAN_DICTIONARY_FILE.is_file():
+        if LOCAL_MODEL_ROOT is not None:
+            raise RuntimeError(f"Local Paddle dictionary is missing: {KOREAN_DICTIONARY_FILE}")
+        print("Downloading Korean Paddle decoder dictionary...", flush=True)
         urllib.request.urlretrieve(KOREAN_DICTIONARY_URL, KOREAN_DICTIONARY_FILE)
+
+    print(f"Using Paddle recognition model: {KOREAN_RECOGNITION_DIRECTORY}", flush=True)
 
     dictionary = KOREAN_DICTIONARY_FILE.read_text(encoding="utf-8").splitlines()
     if len(dictionary) < 3000 or not any("가" <= character <= "힣" for character in dictionary):

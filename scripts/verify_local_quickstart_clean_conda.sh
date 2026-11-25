@@ -32,8 +32,12 @@ Optional environment variables:
   PADDLE_OCR_PORT                 Paddle port (default 8100)
   ROUTER_PORT                     Router CPU port (default 8001)
   QUICKSTART_READY_TIMEOUT        Server startup timeout in seconds (default 1200)
-  PADDLE_PDX_LOCAL_FONT_FILE_PATH  Installed TTF/TTC (auto-detected if possible)
+  PADDLE_PDX_LOCAL_FONT_FILE_PATH  Optional font override (also read from .env).
+                                Otherwise detect installed fonts, or download
+                                verified Noto Sans KR into tmp/paddle_fonts.
   DOLPHIN_15_MODEL                Existing model directory or Hugging Face model ID
+  PADDLE_OCR_MODEL_ROOT           Local Paddle models + dictionary, prepared by
+                                tools/quickstart/download_paddle_models.py (optional)
 
 Servers started by this script stop on success, failure, or interruption.
 Environments, private logs, generated quickstart.yaml, and Markdown remain under
@@ -271,15 +275,8 @@ PY_HASH
 fi
 
 if needs_service paddle; then
-    local_font_path="${PADDLE_PDX_LOCAL_FONT_FILE_PATH:-}"
-    if [[ -z "$local_font_path" ]]; then
-        for candidate in /System/Library/Fonts/AppleSDGothicNeo.ttc \
-            /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
-            /usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf; do
-            if [[ -f "$candidate" ]]; then local_font_path="$candidate"; break; fi
-        done
-    fi
-    [[ -f "$local_font_path" ]] || fail 'set PADDLE_PDX_LOCAL_FONT_FILE_PATH to an installed TTF/TTC file'
+    local_font_path="$("$parser_python" "$repo_root/tools/quickstart/resolve_paddle_font.py" "$repo_root/tmp/paddle_fonts")"
+    printf 'Using PaddleX font: %s\n' "$local_font_path"
 fi
 
 if needs_service dolphin; then
@@ -296,7 +293,7 @@ fi
 if needs_service paddle; then
     printf 'Creating fresh Paddle CPU environment (Python 3.11)...\n'
     create_environment "$paddle_prefix" 3.11
-    "$paddle_prefix/bin/python" -m pip install paddlepaddle==3.0.0 --index-url https://www.paddlepaddle.org.cn/packages/stable/cpu/
+    "$paddle_prefix/bin/python" -m pip install paddlepaddle==3.0.0 --index-url https://pypi.org/simple
     "$paddle_prefix/bin/python" -m pip install -r "$repo_root/tutorial/paddle_ocr_fastapi/requirements.txt"
     record_environment "$paddle_prefix" paddle
 fi
@@ -368,4 +365,4 @@ process_pids+=("$cli_pid")
 wait "$cli_pid"
 
 # Verify actual routing, model usage, page completeness and native text preservation.
-"$parser_python" tools/verify_quickstart_result.py "$run_config" "$evidence_dir"
+"$parser_python" tools/quickstart/verify_quickstart_result.py "$run_config" "$evidence_dir"

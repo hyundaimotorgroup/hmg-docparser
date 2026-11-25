@@ -258,7 +258,66 @@ YAML·출력은 `tmp/clean_conda_local_quickstart/<run-id>/` 아래에 보존합
 선택하세요. 스크립트는 로컬 제공자 URL을 재정의하며 포트는 `DOLPHIN_15_PORT`와
 `PADDLE_OCR_PORT`로 지정합니다. 다른 옵션은
 `bash scripts/verify_local_quickstart_clean_conda.sh --help`로 확인하세요.
+설치된 폰트를 자동으로 찾으며, 사용 가능한 폰트가 없으면 체크섬을 검증한
+Noto Sans KR과 OFL 라이선스를 `tmp/paddle_fonts/`에 내려받아 재사용합니다.
+환경변수나 `.env`의 `PADDLE_PDX_LOCAL_FONT_FILE_PATH`로 직접 지정할 수도 있습니다.
 `sh`로 실행해도 자동으로 Bash 문법을 사용합니다.
+
+### Dolphin 모델 다운로드가 타임아웃되는 경우
+
+Hugging Face는 모델 다운로드를 CDN으로 리다이렉트합니다. `huggingface.co`에
+접속할 수 있어도 `us.aws.cdn.hf.co` 연결이 타임아웃되면 `model.safetensors`를
+받지 못할 수 있습니다. HTTP 302 이후 연결 타임아웃은 리다이렉트 응답은
+받았지만 실제 다운로드 서버에는 연결하지 못했다는 뜻입니다.
+
+모델을 다운로드할 수 있는 다른 컴퓨터에서 실행합니다.
+
+```bash
+python -m pip install huggingface_hub
+hf download ByteDance/Dolphin-1.5 --local-dir ./Dolphin-1.5
+```
+
+다운로드가 끝나면 `Dolphin-1.5` 디렉터리의 내용 전체를 서버의 프로젝트 아래
+`models/dolphin/`으로 복사합니다. 가중치뿐 아니라 설정·토크나이저·프로세서
+파일도 함께 필요합니다. 이후 서버의 프로젝트 루트에서 실행합니다.
+
+```bash
+DOLPHIN_15_MODEL="$PWD/models/dolphin" \
+  bash scripts/verify_local_quickstart_clean_conda.sh
+```
+
+`DOLPHIN_15_MODEL=/home/6901188/hmg-docparser-main/models/dolphin`처럼
+절대 경로로 지정해도 됩니다. 인자를 생략하면 `configs/local_quickstart.yaml`의
+`input_dir`를 사용하며, 해당 입력은 실제 존재하는 PDF 파일이어야 합니다.
+Dolphin 서버에 전달되도록 `DOLPHIN_15_MODEL`은 위 예시처럼 셸에서 지정하세요.
+이렇게 하면 Dolphin을 로컬 파일에서 읽습니다. 패키지 설치·Paddle 모델 다운로드·
+LLM/VLM 호출에 필요한 네트워크 접속은 별도로 필요합니다.
+
+### Paddle 모델 다운로드가 멈추는 경우
+
+한국어 인식 모델을 받을 때 `Fetching 6 files`가 표시됩니다. 텍스트 검출 모델·
+한국어 인식 모델·한국어 디코더 사전을 다른 컴퓨터에서 받아 서버로 옮길 수
+있습니다. 다운로드가 가능한 컴퓨터의 프로젝트 루트에서 실행합니다.
+
+```bash
+python -m pip install 'huggingface_hub>=0.24,<1' truststore
+python tools/quickstart/download_paddle_models.py
+```
+
+생성된 `models/paddle/` 디렉터리 전체를 서버 프로젝트의 같은 위치로 복사합니다.
+이 디렉터리에는 `PP-OCRv5_mobile_det/`, `korean_PP-OCRv5_mobile_rec/`
+(`ppocrv5_korean_dict.txt` 포함), 다운로드 출처 기록이 들어 있습니다.
+서버의 프로젝트 루트에서 실행합니다.
+
+```bash
+DOLPHIN_15_MODEL="$PWD/models/dolphin" \
+PADDLE_OCR_MODEL_ROOT="$PWD/models/paddle" \
+  bash scripts/verify_local_quickstart_clean_conda.sh
+```
+
+`PADDLE_OCR_MODEL_ROOT`를 지정하면 Paddle 서버는 이 경로의 로컬 모델과 사전을
+사용합니다. 파일이 누락된 경우 다운로드를 다시 시도하지 않고 오류를 출력합니다.
+패키지 설치와 LLM/VLM 호출에 필요한 네트워크 접속은 별도로 필요합니다.
 
 ## 모델과 샘플 조건
 
@@ -267,11 +326,3 @@ YAML·출력은 `tmp/clean_conda_local_quickstart/<run-id>/` 아래에 보존합
 [데이터 처리](privacy-and-data-handling.md)를 참고하세요. 상업적 레이아웃 분석에는
 PP-DocLayoutV3를 권장합니다. 제공 라우터 프로필은 Dolphin v2 연구 라이선스의
 조건을 따르며 PP-DocLayoutV3 사용에는 호환 어댑터가 필요합니다.
-
-LLM/VLM 사용량은 기본 기록되며 비용은 선택 사항입니다. 기본 프로필은 가격을 계산하지 않습니다. 실제 요율의 `pricing_file` 설정과 재계산은 [사용량·가격 안내](llm-inference.md)를 참고하세요.
-
-
-`configs/beta.yaml`은 성능 검증 중인 block-context 프로필입니다. group_internal의 모델·라우터·layout/OCR 연결이 필요하며 자세한 역할·비용·실패 보존 계약은 [설정](configuration.md#성능-검증용-beta-프로필)을 참고하세요.
-
-
-2026-11-25 새 그래프 검증: mixed_source_9p의 local clean Conda 실행은 parser/router 3.12·Dolphin 3.12·Paddle 3.11을 새로 설치해 9페이지, Stage 1/2 페이지 기록 각 9개, Stage 2 요소 35개, 실제 LLM/VLM 요청 35회를 확인했습니다. default는 동일 PDF에서 9페이지·Stage 2 요소 16개·모델 요청 17회를 확인했습니다. 두 실행 모두 6·7·8페이지 요청 0회와 내장 텍스트 보존, 누락·중복·페이지 오류 없음 및 소유 라우터 정리를 확인했습니다. 제공자 모델과 Dolphin 버전 차이로 요청 수·본문이 달라질 수 있습니다. beta의 성능 평가는 별도입니다.

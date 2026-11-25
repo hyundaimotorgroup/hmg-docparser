@@ -16,6 +16,13 @@ by Git. The server binds that dictionary to the local inference configuration;
 it must not use the generic `PP-OCRv5_mobile_rec` dictionary, which is
 Chinese-oriented and cannot recognize Korean reliably.
 
+For a server without model download access, prepare both models and the Korean
+dictionary with `python tools/quickstart/download_paddle_models.py` on another computer,
+transfer `models/paddle/`, and set `PADDLE_OCR_MODEL_ROOT` to its absolute path.
+See the [quickstart transfer guide](../../docs/quickstart.md#if-the-paddle-model-download-stalls).
+An explicit local model root must contain all required assets; the service
+reports missing files instead of downloading replacements.
+
 ## Install (CPU)
 
 Use a separate environment so the Paddle runtime does not affect the parser
